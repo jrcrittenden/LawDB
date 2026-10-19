@@ -3,6 +3,8 @@
 
 Supersedes v1 (general-purpose IRAC search platform). Scope is now one research question.
 
+**Purpose:** Establish a record of semantic drift in legal language, using the First Amendment as the testbed. It is chosen because it is among the most argued and commented-on parts of the Constitution, which gives a long, continuous, high-volume record in which drift can be detected. (That it is *the most* discussed is an assumption, not something we have measured, and the design does not depend on it; it only needs enough volume over a long enough span.) A successful method here could later be applied to other provisions.
+
 **Question:** Has the way the Supreme Court discusses the First Amendment and free speech drifted semantically over time, and if so, along what dimensions (doctrine, rationale, vocabulary)?
 
 ## 1. Decisions
