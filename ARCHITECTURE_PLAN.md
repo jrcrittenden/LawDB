@@ -67,6 +67,20 @@ Because drift conclusions depend on the embedding model, run at least two (one g
 
 ## 6. Drift analysis
 
+### Two kinds of drift
+
+1. **Drift in meaning:** the stated definition changes (the rule, test, or definition of "speech", "press", "abridging" is itself reworded or replaced).
+2. **Drift in understood meaning:** the stated definition stays the same but what it is understood to cover changes (same words, different application).
+
+Operationalization, using the extraction components:
+
+| Kind | Primary signal | Check |
+|---|---|---|
+| Meaning | Drift in **rule** component embeddings and in standard-of-review / test codings | Quoted rule text differs across eras for the same doctrine |
+| Understood meaning | **Rule stable, application/outcome moving**: application embeddings drift, or outcomes (protected / not protected) change, within the same rule and the same speech category | Matched comparisons: same speech category + same cited test, different era, different result |
+
+Caveats: understood-meaning drift is confounded with changing facts (new media, new kinds of speech), so comparisons are made within speech-category codings and facts are read, not assumed comparable. It is also open **whose** understanding is meant: the Court's own applied understanding (measurable from the opinions) or the wider community's (needs the external law review / press corpus). The first run measures only the former.
+
 Embedding drift alone is easy to misread: legal prose style, citation formats, and topic mix all change over time. Controls:
 
 - **Baseline (optional, deferred):** the confound is that SCOTUS prose changes over time for reasons unrelated to speech (style, citation habits, topic mix), so "speech opinions drifted" does not by itself mean "speech *discourse* drifted". A baseline is a random sample of non-speech SCOTUS opinions run through the same embedding step (no LLM extraction, so near-zero cost) to show how much drift to expect from general language change. Not required for the first analysis; add it if the speech drift looks interesting and needs that claim defended.
