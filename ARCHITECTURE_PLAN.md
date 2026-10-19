@@ -1,4 +1,4 @@
-# LawDB: First Amendment Free Speech Drift Study
+# LawDB: First Amendment, Free Speech & Free Press Drift Study
 ## Architecture & Implementation Plan (v2)
 
 Supersedes v1 (general-purpose IRAC search platform). Scope is now one research question.
@@ -9,7 +9,7 @@ Supersedes v1 (general-purpose IRAC search platform). Scope is now one research 
 
 | Area | Decision |
 |---|---|
-| Corpus | ~1,000 SCOTUS opinions, free speech / First Amendment, from CourtListener |
+| Corpus | ~1,000 SCOTUS opinions on the First Amendment, free speech, and free press, **full history (no start-year cutoff)**, from CourtListener |
 | Extraction | Claude via the Claude Agent SDK (Python), structured output |
 | Interface | CLI only |
 | Budget | Configurable hard cap (USD) per run; run stops cleanly when reached |
@@ -23,6 +23,9 @@ Dropped from v1 (not needed at 1k docs): PostgreSQL, Qdrant, Celery, Airflow, Fa
 - CourtListener reachable from the dev environment. **Anonymous access is throttled to 125 requests/day**, so an API token is required (free account). The throttle is likely keyed on the shared cloud egress IP, not on this project; a token should move the limit to a per-account basis (untested until a token is provided).
 - A search for `"freedom of speech" OR "First Amendment"`, court=scotus, precedential only, returns **1,761** hits. So 1k is available, but "mentions the First Amendment" is not "is a free speech case"; selection needs a relevance step (below).
 
+- **Early history is thin.** Precedential SCOTUS hits for `"freedom of speech" OR "liberty of speech" OR "freedom of the press" OR "liberty of the press" OR "First Amendment"` before 1919: **47** (34 with only `"freedom of speech" OR "First Amendment"`). Before 1850: **2**. Cutting off at 1919 would hide any 1789-1919 drift, but that era will have few documents, so early bins carry wide uncertainty. Counts are search hits, not confirmed relevant cases.
+- Terminology itself drifts ("liberty of the press", "freedom of the press", pre-incorporation cases decided as federal-only), so keyword queries must be broad and recall in the early era should be spot-checked by reading, not trusted.
+
 Not yet verified: opinion text quality for older cases (OCR / HTML vs plain text), per-case token counts, actual cost per opinion.
 
 ## 3. Pipeline
@@ -32,7 +35,7 @@ fetch -> select -> extract -> embed -> analyze -> rate
 ```
 
 1. **Fetch** (`lawdb fetch`): CourtListener v4 API, cluster + opinion text + metadata. Cache raw JSON on disk, idempotent and resumable.
-2. **Select** (`lawdb select`): candidate pool from keyword search (about 1.7k), then a cheap Claude classification (is free speech / expression the central issue?). Take the top ~1,000, stratified so no era is starved. Record inclusion decisions and reasons.
+2. **Select** (`lawdb select`): candidate pool from a broad keyword search (speech, press, First Amendment, plus historical variants like "liberty of the press"), then a cheap Claude classification (is free speech / free press / First Amendment expression the central issue?). Erring toward accuracy: **take every pre-1919 candidate that classifies as relevant** and fill the rest of the ~1,000 from later eras, rather than sampling proportionally. Record inclusion decisions and reasons. Borderline candidates are kept and tagged, not dropped.
 3. **Extract** (`lawdb extract`): Agent SDK run per opinion, schema-validated output (section 4). Every extracted span must be a verbatim quote that is verified against the source text by offset; failures are retried, then flagged. Tracks tokens and cost per call in a ledger.
 4. **Embed** (`lawdb embed`): see section 5.
 5. **Analyze** (`lawdb analyze`): drift metrics and plots (section 6).
@@ -65,7 +68,8 @@ Embedding drift alone is easy to misread: legal prose style, citation formats, a
 
 - **Control corpus:** same pipeline on a non-speech topic (e.g. Fourth Amendment) to separate general SCOTUS language change from speech-specific drift.
 - **Component-level, not whole-document:** compare rules to rules, rationales to rationales. Strip citations and boilerplate before embedding.
-- **Metrics:** decade-binned centroid distance, nearest-neighbor era mixing (do neighbors come from the same era?), clustering stability, change-point detection.
+- **Uneven eras:** bin by historical period (e.g. founding/Sedition Act, 19th century, 1919-1960s, Warren, Burger/Rehnquist, Roberts) rather than equal-width decades, report n per bin, and use bootstrap intervals so thin early bins are not over-read. Pre-incorporation (before 1925) cases are tagged since the doctrinal context differs.
+- **Metrics:** period-binned centroid distance, nearest-neighbor era mixing (do neighbors come from the same era?), clustering stability, change-point detection.
 - **Categorical cross-check:** the codings in section 4 give interpretable time series (e.g. share of strict scrutiny, shifts in rationale). Embedding drift that has no categorical or human-readable counterpart gets treated as suspect.
 - **Qualitative:** pull the exemplar passages at each detected shift for manual reading.
 
@@ -114,7 +118,7 @@ LawDB/
 
 ## 11. Open questions
 
-1. **Date range:** all of SCOTUS history (CourtListener coverage thins pre-1900) or from a fixed year, e.g. 1919 (*Schenck*) onward, where free speech doctrine actually begins?
+1. ~~Date range~~ **Resolved:** full history; scope is First Amendment, free speech, and free press.
 2. **Budget number:** default cap for the pilot and for the full run?
 3. **Control topic:** Fourth Amendment as the control corpus, or something else?
 4. **Raters:** just you, or more than one?
