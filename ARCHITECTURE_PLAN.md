@@ -116,13 +116,14 @@ LawDB/
 4. **Embed + analyze** (with control corpus).
 5. **Human rating,** accuracy report.
 6. **Decision point:** add other models (extraction and embeddings) and compare.
+7. **Candidate, not committed: external discourse corpus.** Law review articles (and possibly press for the early era) that comment on SCOTUS speech/press decisions, to test whether SCOTUS drift tracks, leads, or lags outside discourse, and whether drift on the same dimensions (tests, rationales) appears in a stream with different stylistic drivers. Open issues: bulk full-text availability and licensing (most law review archives are paywalled or ToS-restricted), uneven coverage (law reviews start in the 1880s; early eras would need press), and relevance filtering. Availability must be probed before this is planned further.
 
 ## 11. Open questions
 
 1. ~~Date range~~ **Resolved:** full history; scope is First Amendment, free speech, and free press.
 2. **Budget number:** default cap for the pilot and for the full run?
 3. ~~Control topic~~ **Deferred:** optional non-speech baseline, embeddings only (see section 6).
-4. **Raters:** just you, or more than one?
+4. **Raters:** unknown for now; rater ID is stored with every rating so this can be decided later.
 5. ~~Concurrences~~ **Resolved:** included. Dissents: confirm they should be too.
 
 ---
