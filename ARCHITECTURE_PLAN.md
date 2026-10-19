@@ -35,7 +35,8 @@ fetch -> select -> extract -> embed -> analyze -> rate
 ```
 
 1. **Fetch** (`lawdb fetch`): CourtListener v4 API, cluster + opinion text + metadata. Cache raw JSON on disk, idempotent and resumable.
-2. **Select** (`lawdb select`): candidate pool from a broad keyword search (speech, press, First Amendment, plus historical variants like "liberty of the press"), then a cheap Claude classification (is free speech / free press / First Amendment expression the central issue?). Erring toward accuracy: **take every pre-1919 candidate that classifies as relevant** and fill the rest of the ~1,000 from later eras, rather than sampling proportionally. Record inclusion decisions and reasons. Borderline candidates are kept and tagged, not dropped.
+   Fetch the **entire** keyword-matched candidate pool first (broad terms: speech, press, First Amendment, plus historical variants like "liberty of the press"). No selection or reranking happens until the whole pool is on disk.
+2. **Select / rerank** (`lawdb select`): run once over the complete pool. Score relevance with a cheap Claude classification (is free speech / free press / First Amendment expression the central issue?), optionally combined with embedding similarity to the retrieved set. Erring toward accuracy: **take every pre-1919 candidate that classifies as relevant**, then fill to the ~1,000 target from later eras by rank, rather than sampling proportionally. Record scores, inclusion decisions and reasons. Borderline candidates are kept and tagged, not dropped. Since the pool is only ~1.8k, the cutoff can be revisited after seeing the score distribution.
 3. **Extract** (`lawdb extract`): Agent SDK run per opinion, schema-validated output (section 4). Every extracted span must be a verbatim quote that is verified against the source text by offset; failures are retried, then flagged. Tracks tokens and cost per call in a ledger.
 4. **Embed** (`lawdb embed`): see section 5.
 5. **Analyze** (`lawdb analyze`): drift metrics and plots (section 6).
@@ -45,7 +46,7 @@ Each stage reads and writes the store, keyed by `(opinion_id, stage, model, prom
 
 ## 4. Extraction schema
 
-Per opinion, separately for majority / plurality, each concurrence, each dissent (voice matters for drift; do not collapse them):
+Per opinion, separately for majority / plurality, **each concurrence**, and each dissent (voice matters for drift; do not collapse them; concurrences are in scope for run 1, dissents are included on the same basis unless you say otherwise). Each separate opinion is its own record with author, joiners, and type:
 
 - **IRAC core:** issue, rule (legal test or standard stated), application, holding/conclusion
 - **Drift-oriented codings** (categorical, so drift can be measured without embeddings):
@@ -66,7 +67,7 @@ Because drift conclusions depend on the embedding model, run at least two (one g
 
 Embedding drift alone is easy to misread: legal prose style, citation formats, and topic mix all change over time. Controls:
 
-- **Control corpus:** same pipeline on a non-speech topic (e.g. Fourth Amendment) to separate general SCOTUS language change from speech-specific drift.
+- **Baseline (optional, deferred):** the confound is that SCOTUS prose changes over time for reasons unrelated to speech (style, citation habits, topic mix), so "speech opinions drifted" does not by itself mean "speech *discourse* drifted". A baseline is a random sample of non-speech SCOTUS opinions run through the same embedding step (no LLM extraction, so near-zero cost) to show how much drift to expect from general language change. Not required for the first analysis; add it if the speech drift looks interesting and needs that claim defended.
 - **Component-level, not whole-document:** compare rules to rules, rationales to rationales. Strip citations and boilerplate before embedding.
 - **Uneven eras:** bin by historical period (e.g. founding/Sedition Act, 19th century, 1919-1960s, Warren, Burger/Rehnquist, Roberts) rather than equal-width decades, report n per bin, and use bootstrap intervals so thin early bins are not over-read. Pre-incorporation (before 1925) cases are tagged since the doctrinal context differs.
 - **Metrics:** period-binned centroid distance, nearest-neighbor era mixing (do neighbors come from the same era?), clustering stability, change-point detection.
@@ -110,7 +111,7 @@ LawDB/
 
 0. **Setup:** package skeleton, config, store, CourtListener token.
 1. **Pilot:** fetch + extract 10 opinions; measure cost, text quality, quote-verification pass rate.
-2. **Select + fetch ~1k;** review selection decisions.
+2. **Fetch the whole candidate pool,** then select/rerank over it; review selection decisions.
 3. **Full extraction run** under budget cap.
 4. **Embed + analyze** (with control corpus).
 5. **Human rating,** accuracy report.
@@ -120,9 +121,9 @@ LawDB/
 
 1. ~~Date range~~ **Resolved:** full history; scope is First Amendment, free speech, and free press.
 2. **Budget number:** default cap for the pilot and for the full run?
-3. **Control topic:** Fourth Amendment as the control corpus, or something else?
+3. ~~Control topic~~ **Deferred:** optional non-speech baseline, embeddings only (see section 6).
 4. **Raters:** just you, or more than one?
-5. **Concurrences / dissents:** extract all separately (higher cost, richer drift signal) or majority only for run 1?
+5. ~~Concurrences~~ **Resolved:** included. Dissents: confirm they should be too.
 
 ---
 
