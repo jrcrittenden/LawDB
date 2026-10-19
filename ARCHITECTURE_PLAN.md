@@ -79,7 +79,7 @@ Operationalization, using the extraction components:
 | Meaning | Drift in **rule** component embeddings and in standard-of-review / test codings | Quoted rule text differs across eras for the same doctrine |
 | Understood meaning | **Rule stable, application/outcome moving**: application embeddings drift, or outcomes (protected / not protected) change, within the same rule and the same speech category | Matched comparisons: same speech category + same cited test, different era, different result |
 
-Caveats: understood-meaning drift is confounded with changing facts (new media, new kinds of speech), so comparisons are made within speech-category codings and facts are read, not assumed comparable. It is also open **whose** understanding is meant: the Court's own applied understanding (measurable from the opinions) or the wider community's (needs the external law review / press corpus). The first run measures only the former.
+Caveats: understood-meaning drift is confounded with changing facts (new media, new kinds of speech), so comparisons are made within speech-category codings and facts are read, not assumed comparable. Scope decision: "understood meaning" here means the **Court's own applied understanding**, measurable from the opinions. The wider public's or academy's understanding is a future study.
 
 Embedding drift alone is easy to misread: legal prose style, citation formats, and topic mix all change over time. Controls:
 
@@ -132,7 +132,7 @@ LawDB/
 4. **Embed + analyze** (with control corpus).
 5. **Human rating,** accuracy report.
 6. **Decision point:** add other models (extraction and embeddings) and compare.
-7. **Candidate, not committed: external discourse corpus.** Law review articles (and possibly press for the early era) that comment on SCOTUS speech/press decisions, to test whether SCOTUS drift tracks, leads, or lags outside discourse, and whether drift on the same dimensions (tests, rationales) appears in a stream with different stylistic drivers. Open issues: bulk full-text availability and licensing (most law review archives are paywalled or ToS-restricted), uneven coverage (law reviews start in the 1880s; early eras would need press), and relevance filtering. Availability must be probed before this is planned further.
+7. **Out of scope for now (future, grant-funded): external discourse corpus.** The study is about the Court's own meaning and applied understanding; the public's / academy's interpreted meaning is deferred. Law review articles (and possibly press for the early era) that comment on SCOTUS speech/press decisions, to test whether SCOTUS drift tracks, leads, or lags outside discourse, and whether drift on the same dimensions (tests, rationales) appears in a stream with different stylistic drivers. Open issues: bulk full-text availability and licensing (most law review archives are paywalled or ToS-restricted), uneven coverage (law reviews start in the 1880s; early eras would need press), and relevance filtering. Availability must be probed before this is planned further.
 
 ## 11. Open questions
 
