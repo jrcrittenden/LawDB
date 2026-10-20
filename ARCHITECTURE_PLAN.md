@@ -22,7 +22,9 @@ Dropped from v1 (not needed at 1k docs): PostgreSQL, Qdrant, Celery, Airflow, Fa
 
 ## 2. Verified assumptions
 
-- CourtListener reachable from the dev environment. **Anonymous access is throttled to 125 requests/day**, so an API token is required (free account). The throttle is likely keyed on the shared cloud egress IP, not on this project; a token should move the limit to a per-account basis (untested until a token is provided).
+- CourtListener's REST API is reachable, but the rate limit is **125 requests/day even with a token** (5/min, 50/hr; higher limits need a Free Law Project membership). Fetching a ~1.8k-case pool one request at a time would take weeks, so **the REST API is not the ingestion path**. Anonymous requests hit the same limit.
+- **Harvard CAP static files** (`static.case.law/us/<volume>/cases/*.json`, per-case JSON for U.S. Reports, no auth) are reachable from here; a spot check of 410 U.S. 113 returned 200. Candidate primary source for 1790-2018. Not yet verified: whether the JSON includes separate opinions (majority / concurrence / dissent) with authors, and whether the text quality is adequate.
+- **CourtListener bulk data** (public S3 bucket, monthly CSV dumps) is reachable. The `opinion-clusters` dump is 2.5 GB, but `opinions` is **55 GB compressed**, so it would have to be stream-filtered. Fallback if CAP's structure is inadequate, or for post-2018 cases.
 - A search for `"freedom of speech" OR "First Amendment"`, court=scotus, precedential only, returns **1,761** hits. So 1k is available, but "mentions the First Amendment" is not "is a free speech case"; selection needs a relevance step (below).
 
 - **Early history is thin.** Precedential SCOTUS hits for `"freedom of speech" OR "liberty of speech" OR "freedom of the press" OR "liberty of the press" OR "First Amendment"` before 1919: **47** (34 with only `"freedom of speech" OR "First Amendment"`). Before 1850: **2**. Cutting off at 1919 would hide any 1789-1919 drift, but that era will have few documents, so early bins carry wide uncertainty. Counts are search hits, not confirmed relevant cases.
