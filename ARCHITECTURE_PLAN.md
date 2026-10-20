@@ -65,7 +65,7 @@ Each stage reads and writes the store, keyed by `(opinion_id, stage, model, prom
 - **Provenance downstream:** quotes in extraction are verified against canonical text with an offset map back to the original. Analysis carries a `text_source` tag (original / normalized / reviewed) so drift results can be rerun without normalized cases as a sensitivity check.
 - **Cost:** LLM normalization applies only to flagged cases and counts against the same budget cap.
 
-Limits: the seriatim opinions of the 1790s are a single block, so per-justice attribution is not recoverable by this stage. OCR can't be improved beyond what the text implies; some tokens will stay uncertain and are marked rather than guessed.
+Seriatim opinions (1790s) arrive as a single block. Attempt order: (1) split on the justice headings that appear inline in the text (the 1796 sample has "Chace, Jujtice." at the start; other headings in it are probably garbled and a first regex pass found only that one, so splitting works best after normalization); (2) where that fails, use published scholarship on those cases to validate or supply the attribution (hand-curated, recorded as a manual annotation with its source); (3) otherwise keep the block as one `unattributed` record. Drawing on outside articles for attribution is a data-cleaning use, not the deferred discourse corpus. OCR can't be improved beyond what the text implies; some tokens will stay uncertain and are marked rather than guessed.
 
 ## 4. Extraction schema
 
