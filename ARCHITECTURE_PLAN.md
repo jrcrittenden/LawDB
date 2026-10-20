@@ -25,7 +25,7 @@ Dropped from v1 (not needed at 1k docs): PostgreSQL, Qdrant, Celery, Airflow, Fa
 - CourtListener's REST API is reachable, but the rate limit is **125 requests/day even with a token** (5/min, 50/hr; higher limits need a Free Law Project membership). Fetching a ~1.8k-case pool one request at a time would take weeks, so **the REST API is not the ingestion path**. Anonymous requests hit the same limit.
 - **Harvard CAP static files** (`static.case.law/us/<volume>/cases/*.json`, per-case JSON for U.S. Reports, no auth) are reachable from here; a spot check of 410 U.S. 113 returned 200. **Primary source for 1790-2018** (572 U.S. Reports volumes, decisions through at least 1879 in the volumes listed first; the latest volume should be confirmed).
   - Verified on spot checks (*Brandenburg*, *Near v. Minnesota*, *Ware v. Hylton*): each case JSON has `casebody.opinions[]` with `type` (majority / concurrence / dissent), `author`, and `text`, plus `decision_date`, `citations`, and `cites_to`. This supports the concurrence extraction. Each volume has a `CasesMetadata.json` (no text), so keyword filtering needs the full case JSON; a one-time download of all U.S. Reports cases is the likely approach.
-  - **Caveats found:** (a) early text is OCR-noisy (1796 sample has long-s errors: "Jujtice", "palled", "confideration"), which will hurt keyword recall and embeddings for early eras, so normalization and a per-case text-quality flag are needed; (b) seriatim opinions (e.g. 1796) come as a single `majority` block with no per-justice split; (c) author strings are OCR-noisy ("Mb. Justice Butler,") and need normalization; (d) the collection includes per-curiam orders and non-opinions, which the select step must handle; (e) coverage ends in 2018, so later cases need a separate source (few enough for the CourtListener API at 125/day).
+  - **Caveats found:** (a) early text is OCR-noisy (1796 sample has long-s misreadings: "Jujtice", "palled", "confideration"), which will hurt keyword recall and embeddings for early eras; handled by the normalization stage (section 3a); (b) seriatim opinions (e.g. 1796) come as a single `majority` block with no per-justice split; (c) author strings are OCR-noisy ("Mb. Justice Butler,") and need normalization; (d) the collection includes per-curiam orders and non-opinions, which the select step must handle; (e) coverage ends in 2018, so later cases need a separate source (few enough for the CourtListener API at 125/day).
 - **CourtListener bulk data** (public S3 bucket, monthly CSV dumps) is reachable. The `opinion-clusters` dump is 2.5 GB, but `opinions` is **55 GB compressed**, so it would have to be stream-filtered. Fallback if CAP's structure is inadequate, or for post-2018 cases.
 - A search for `"freedom of speech" OR "First Amendment"`, court=scotus, precedential only, returns **1,761** hits. So 1k is available, but "mentions the First Amendment" is not "is a free speech case"; selection needs a relevance step (below).
 
@@ -37,8 +37,10 @@ Not yet verified: opinion text quality for older cases (OCR / HTML vs plain text
 ## 3. Pipeline
 
 ```
-fetch -> select -> extract -> embed -> analyze -> rate
+fetch -> normalize -> select -> extract -> embed -> analyze -> rate
 ```
+
+`normalize` runs on any fetched case whose text-quality score exceeds a threshold (not only by era); see section 3a. Select and extract read the canonical text when one exists.
 
 1. **Fetch** (`lawdb fetch`): CourtListener v4 API, cluster + opinion text + metadata. Cache raw JSON on disk, idempotent and resumable.
    Fetch the **entire** keyword-matched candidate pool first (broad terms: speech, press, First Amendment, plus historical variants like "liberty of the press"). No selection or reranking happens until the whole pool is on disk.
@@ -49,6 +51,21 @@ fetch -> select -> extract -> embed -> analyze -> rate
 6. **Rate** (`lawdb rate`): human rating UI in the terminal (section 7).
 
 Each stage reads and writes the store, keyed by `(opinion_id, stage, model, prompt_version)` so reruns with other models do not overwrite run 1.
+
+## 3a. Text normalization (canonical text)
+
+**Problem:** the early texts use the long s (ſ), which looks like an "f" or "j" in the page image; the OCR reads "Justice" as "Jujtice", "passed" as "palled", "consideration" as "confideration". These are mostly misreadings of a real period glyph, not printing or scanning flaws. A quick crude check (share of words missing from a small vocabulary built from modern cases; weak, indicative only) put the earliest volume (1794-96) at 8-25% per case versus roughly 5-15% in later volumes, so the worst damage looks concentrated in the 1790s and fades by the early 1800s. Real thresholds must come from a better quality score.
+
+**Approach:**
+- **Original is immutable.** Canonical text is a derived record stored beside it, never in place of it.
+- **Restore, don't modernize.** The target is what the printed page said: long s becomes s, OCR confusions are corrected, but period spelling and usage ("shew", "publick", "chuse", capitalization) are kept. Modernizing vocabulary would itself change the signal a drift study measures.
+- **Staged:** (1) deterministic pass for long-s confusions (f/j/l for s, using a modern-plus-period lexicon and word-frequency scoring); (2) LLM pass only for residue, which must return a **list of edits** (span, original, replacement, reason), not a rewritten document, so each edit is checkable and bounded; edits beyond a character-edit-distance limit are rejected.
+- **Edit log:** every change stored with method (rule / LLM), confidence, and original span.
+- **Flagged for review:** every case that needed normalization is marked `needs_review`; a human-review queue (`lawdb review-text`) shows original vs canonical side by side. Review status (`unreviewed` / `reviewed`) travels with the case.
+- **Provenance downstream:** quotes in extraction are verified against canonical text with an offset map back to the original. Analysis carries a `text_source` tag (original / normalized / reviewed) so drift results can be rerun without normalized cases as a sensitivity check.
+- **Cost:** LLM normalization applies only to flagged cases and counts against the same budget cap.
+
+Limits: the seriatim opinions of the 1790s are a single block, so per-justice attribution is not recoverable by this stage. OCR can't be improved beyond what the text implies; some tokens will stay uncertain and are marked rather than guessed.
 
 ## 4. Extraction schema
 
