@@ -119,7 +119,8 @@ Embedding drift alone is easy to misread: legal prose style, citation formats, a
 
 ## 8. Budget control
 
-- `--max-usd` on every LLM-calling command, plus a default in config.
+- **Current cap: $5 total** (set in config; pay-per-token API key, restricted to this project, supplied as an environment variable `ANTHROPIC_API_KEY`, never committed). At this cap only the pilot and a small slice of the corpus are affordable; the full run needs a larger cap, to be decided from measured token counts.
+- `--max-usd` on every LLM-calling command, plus a default in config. Without an explicit cap, LLM commands only produce a dry-run estimate.
 - Pre-run estimate from token counts (counted, not guessed) with confirmation if estimate exceeds the cap.
 - Ledger table of every call (tokens in/out, cost, model); run halts when cumulative spend reaches the cap and resumes from where it stopped.
 - Pilot first: 10 opinions end to end to measure real per-opinion cost before committing the full run.
@@ -158,7 +159,7 @@ LawDB/
 ## 11. Open questions
 
 1. ~~Date range~~ **Resolved:** full history; scope is First Amendment, free speech, and free press.
-2. **Budget number:** default cap for the pilot and for the full run?
+2. **Budget:** $5 for now (pilot scale). Full-run cap to be decided from measured token counts.
 3. ~~Control topic~~ **Deferred:** optional non-speech baseline, embeddings only (see section 6).
 4. **Raters:** unknown for now; rater ID is stored with every rating so this can be decided later.
 5. ~~Concurrences~~ **Resolved:** included. Dissents: confirm they should be too.
